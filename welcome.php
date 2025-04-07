@@ -485,13 +485,23 @@ $footer_links = [
 ];
 
 // Handle search
+// Handle search
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $search_results = [];
 $all_products = array_merge($main_products, $offers);
 
+// Loại bỏ trùng lặp trong $all_products
+$unique_products = [];
+$product_names = [];
+foreach ($all_products as $product) {
+    if (!in_array($product['name'], $product_names)) {
+        $product_names[] = $product['name'];
+        $unique_products[] = $product;
+    }
+}
+
 if (!empty($search_query)) {
-    $combined_products = array_merge($all_products, $offers);
-    $search_results = array_filter($combined_products, function ($product) use ($search_query) {
+    $search_results = array_filter($unique_products, function ($product) use ($search_query) {
         return stripos(strtolower($product['name']), strtolower($search_query)) !== false;
     });
 
@@ -1383,517 +1393,608 @@ if ($is_logged_in) {
     <script nomodule src="https://cdn.jsdelivr.net/npm/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="/welcome.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            let mainProducts = <?= json_encode($main_products, JSON_UNESCAPED_UNICODE) ?>;
-            const offersProducts = <?= json_encode($offers, JSON_UNESCAPED_UNICODE) ?>;
-            const allProducts = <?= json_encode(array_merge($main_products, $offers), JSON_UNESCAPED_UNICODE) ?>;
-            const itemsPerRow = 7;
-            const rowsPerLoad = 2;
-            const itemsPerPage = itemsPerRow * rowsPerLoad;
-            let currentMainItems = itemsPerPage;
+document.addEventListener("DOMContentLoaded", function() {
+    let mainProducts = <?= json_encode($main_products, JSON_UNESCAPED_UNICODE) ?>;
+    const offersProducts = <?= json_encode($offers, JSON_UNESCAPED_UNICODE) ?>;
+    const allProducts = <?= json_encode(array_merge($main_products, $offers), JSON_UNESCAPED_UNICODE) ?>;
+    const itemsPerRow = 7;
+    const rowsPerLoad = 2;
+    const itemsPerPage = itemsPerRow * rowsPerLoad;
+    let currentMainItems = itemsPerPage;
 
-            const updatedProducts = sessionStorage.getItem('updatedProducts');
-            if (updatedProducts) {
-                mainProducts = JSON.parse(updatedProducts);
-                sessionStorage.removeItem('updatedProducts');
-            }
+    const updatedProducts = sessionStorage.getItem('updatedProducts');
+    if (updatedProducts) {
+        mainProducts = JSON.parse(updatedProducts);
+        sessionStorage.removeItem('updatedProducts');
+    }
 
-            const moviesGrid = document.getElementById('movies-grid');
-            const loadMoreBtn = document.getElementById('load-more');
-            const yearSelect = document.querySelector('.year');
-            const priceSelect = document.querySelector('.price');
-            const radioButtons = document.querySelectorAll('input[name="grade"]');
+    const moviesGrid = document.getElementById('movies-grid');
+    const loadMoreBtn = document.getElementById('load-more');
+    const yearSelect = document.querySelector('.year');
+    const priceSelect = document.querySelector('.price');
+    const radioButtons = document.querySelectorAll('input[name="grade"]');
 
-            const offersGrid = document.getElementById('offers-grid');
-            const offersLoadMoreBtn = document.getElementById('offers-load-more');
-            const offersYearSelect = document.querySelector('.offers-year');
-            const offersPriceSelect = document.querySelector('.offers-price');
-            const offersRadioButtons = document.querySelectorAll('input[name="offers-grade"]');
+    const offersGrid = document.getElementById('offers-grid');
+    const offersLoadMoreBtn = document.getElementById('offers-load-more');
+    const offersYearSelect = document.querySelector('.offers-year');
+    const offersPriceSelect = document.querySelector('.offers-price');
+    const offersRadioButtons = document.querySelectorAll('input[name="offers-grade"]');
 
-            function createProductCard(product) {
-                const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
-                const isCustomer = <?= $content_for_customer ? 'true' : 'false' ?>;
-                const isAdmin = <?= $content_for_admin ? 'true' : 'false' ?>;
-                const card = document.createElement('div');
-                card.className = 'movie-card';
-                card.innerHTML = `
-                    <div class="card-head">
-                        <img src="${product.image}" alt="${product.name}" class="card-img">
-                        ${product.discount ? `<div class="discount-badge">-${product.discount}%</div>` : ''}
-                        ${isLoggedIn && !isAdmin ? `
-                            <div class="card-overlay">
-                                ${isCustomer ? `
-                                    <div class="cart-cart">
-                                        <button class="add-to-cart" data-product-name="${product.name}">
-                                            <ion-icon name="cart"></ion-icon>
-                                        </button>
-                                    </div>
-                                ` : ''}
-                                <div class="rating">
-                                    <ion-icon name="star-outline"></ion-icon>
-                                    <span>${product.rating}</span>
-                                </div>
-                                <div class="cart">
-                                    <ion-icon name="cart-outline"></ion-icon>
-                                    <span class="price">
-                                        ${product.original_price ? `
-                                            <span class="original-price">$${product.original_price.toFixed(2)}</span>
-                                            <span class="discounted-price">$${product.discounted_price.toFixed(2)}</span>
-                                        ` : `$${product.price.toFixed(2)}`}
-                                    </span>
-                                </div>
+    const searchInput = document.querySelector('.navbar-form-search');
+    const suggestionsContainer = document.querySelector('.search-suggestions');
+    const searchForm = document.querySelector('.navbar-form');
+    let debounceTimer;
+
+    function createProductCard(product) {
+        const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
+        const isCustomer = <?= $content_for_customer ? 'true' : 'false' ?>;
+        const isAdmin = <?= $content_for_admin ? 'true' : 'false' ?>;
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+        card.innerHTML = `
+            <div class="card-head">
+                <img src="${product.image}" alt="${product.name}" class="card-img">
+                ${product.discount ? `<div class="discount-badge">-${product.discount}%</div>` : ''}
+                ${isLoggedIn && !isAdmin ? `
+                    <div class="card-overlay">
+                        ${isCustomer ? `
+                            <div class="cart-cart">
+                                <button class="add-to-cart" data-product-name="${product.name}">
+                                    <ion-icon name="cart"></ion-icon>
+                                </button>
                             </div>
                         ` : ''}
+                        <div class="rating">
+                            <ion-icon name="star-outline"></ion-icon>
+                            <span>${product.rating}</span>
+                        </div>
+                        <div class="cart">
+                            <ion-icon name="cart-outline"></ion-icon>
+                            <span class="price">
+                                ${product.original_price ? `
+                                    <span class="original-price">$${product.original_price.toFixed(2)}</span>
+                                    <span class="discounted-price">$${product.discounted_price.toFixed(2)}</span>
+                                ` : `$${product.price.toFixed(2)}`}
+                            </span>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <h3 class="card-title">${product.name}</h3>
-                    </div>
-                `;
+                ` : ''}
+            </div>
+            <div class="card-body">
+                <h3 class="card-title">${product.name}</h3>
+            </div>
+        `;
 
-                card.addEventListener('click', function(e) {
-                    if (e.target.closest('.add-to-cart') || e.target.closest('.rating')) return;
-                    if (!isLoggedIn) {
-                        showNotification("Please log in to experience all features!", false);
-                    } else {
-                        const queryString = new URLSearchParams(product).toString();
-                        window.location.href = `proinfor.php?${queryString}`;
-                    }
-                });
-
-                return card;
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('.add-to-cart') || e.target.closest('.rating')) return;
+            if (!isLoggedIn) {
+                showNotification("Please log in to experience all features!", false);
+            } else {
+                const queryString = new URLSearchParams(product).toString();
+                window.location.href = `proinfor.php?${queryString}`;
             }
+        });
 
-            function isYearInRange(year, range) {
-                const productYear = parseInt(year);
-                if (range === 'all') return true;
-                if (range === '2025') return productYear === 2025;
-                if (range === '2020-2024') return productYear >= 2020 && productYear <= 2024;
-                if (range === '2010-2019') return productYear >= 2010 && productYear <= 2019;
-                if (range === '2000-2009') return productYear >= 2000 && productYear <= 2009;
-                if (range === '1980-1999') return productYear >= 1980 && productYear <= 1999;
-                return false;
+        return card;
+    }
+
+    function isYearInRange(year, range) {
+        const productYear = parseInt(year);
+        if (range === 'all') return true;
+        if (range === '2025') return productYear === 2025;
+        if (range === '2020-2024') return productYear >= 2020 && productYear <= 2024;
+        if (range === '2010-2019') return productYear >= 2010 && productYear <= 2019;
+        if (range === '2000-2009') return productYear >= 2000 && productYear <= 2009;
+        if (range === '1980-1999') return productYear >= 1980 && productYear <= 1999;
+        return false;
+    }
+
+    function updateMainProducts() {
+        const year = yearSelect.value;
+        const price = priceSelect.value;
+        const sortOption = document.querySelector('input[name="grade"]:checked').id;
+
+        let filteredProducts = mainProducts.filter(product => {
+            const matchYear = isYearInRange(product.year, year);
+            const productPrice = product.discounted_price || product.price;
+            const matchPrice = price === 'all' ||
+                (price === 'under_20' && productPrice < 20) ||
+                (price === '20_50' && productPrice >= 20 && productPrice <= 50) ||
+                (price === 'above_50' && productPrice > 50);
+
+            return matchYear && matchPrice;
+        });
+
+        if (sortOption === 'popular') {
+            filteredProducts.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+        } else if (sortOption === 'newest') {
+            filteredProducts.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+        }
+
+        moviesGrid.innerHTML = '';
+        if (filteredProducts.length > 0) {
+            const initialProducts = filteredProducts.slice(0, itemsPerPage);
+            initialProducts.forEach(product => {
+                const card = createProductCard(product);
+                moviesGrid.appendChild(card);
+            });
+            attachAddToCartEvents();
+            currentMainItems = itemsPerPage;
+
+            if (filteredProducts.length > itemsPerPage) {
+                loadMoreBtn.style.display = 'block';
+            } else {
+                loadMoreBtn.style.display = 'none';
             }
+        } else {
+            moviesGrid.innerHTML = '<div class="no-results">No Results Found</div>';
+            loadMoreBtn.style.display = 'none';
+        }
 
-            function updateMainProducts() {
-                const year = yearSelect.value;
-                const price = priceSelect.value;
-                const sortOption = document.querySelector('input[name="grade"]:checked').id;
-
-                let filteredProducts = mainProducts.filter(product => {
-                    const matchYear = isYearInRange(product.year, year);
-                    const productPrice = product.discounted_price || product.price;
-                    const matchPrice = price === 'all' ||
-                        (price === 'under_20' && productPrice < 20) ||
-                        (price === '20_50' && productPrice >= 20 && productPrice <= 50) ||
-                        (price === 'above_50' && productPrice > 50);
-
-                    return matchYear && matchPrice;
-                });
-
-                if (sortOption === 'popular') {
-                    filteredProducts.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
-                } else if (sortOption === 'newest') {
-                    filteredProducts.sort((a, b) => parseInt(b.year) - parseInt(a.year));
-                }
-
-                moviesGrid.innerHTML = '';
-                if (filteredProducts.length > 0) {
-                    const initialProducts = filteredProducts.slice(0, itemsPerPage);
-                    initialProducts.forEach(product => {
-                        const card = createProductCard(product);
-                        moviesGrid.appendChild(card);
-                    });
-                    attachAddToCartEvents();
-                    currentMainItems = itemsPerPage;
-
-                    if (filteredProducts.length > itemsPerPage) {
-                        loadMoreBtn.style.display = 'block';
-                    } else {
-                        loadMoreBtn.style.display = 'none';
-                    }
-                } else {
-                    moviesGrid.innerHTML = '';
-                    loadMoreBtn.style.display = 'none';
-                }
-
-                loadMoreBtn.onclick = function() {
-                    const nextItems = filteredProducts.slice(currentMainItems, currentMainItems + itemsPerPage);
-                    nextItems.forEach(product => {
-                        const card = createProductCard(product);
-                        moviesGrid.appendChild(card);
-                    });
-                    currentMainItems += itemsPerPage;
-                    if (currentMainItems >= filteredProducts.length) {
-                        loadMoreBtn.style.display = 'none';
-                    }
-                    attachAddToCartEvents();
-                };
+        loadMoreBtn.onclick = function() {
+            const nextItems = filteredProducts.slice(currentMainItems, currentMainItems + itemsPerPage);
+            nextItems.forEach(product => {
+                const card = createProductCard(product);
+                moviesGrid.appendChild(card);
+            });
+            currentMainItems += itemsPerPage;
+            if (currentMainItems >= filteredProducts.length) {
+                loadMoreBtn.style.display = 'none';
             }
+            attachAddToCartEvents();
+        };
+    }
 
-            function updateOffers() {
-                const year = offersYearSelect.value;
-                const price = offersPriceSelect.value;
-                const sortOption = document.querySelector('input[name="offers-grade"]:checked').id;
+    function updateOffers() {
+        const year = offersYearSelect.value;
+        const price = offersPriceSelect.value;
+        const sortOption = document.querySelector('input[name="offers-grade"]:checked').id;
 
-                const offerCards = document.querySelectorAll('.offer-card');
-                let filteredOffers = Array.from(offerCards).map(card => ({
-                    element: card,
-                    year: card.dataset.year,
-                    price: parseFloat(card.dataset.price),
-                    rating: parseFloat(card.dataset.rating)
-                }));
+        const offerCards = document.querySelectorAll('.offer-card');
+        let filteredOffers = Array.from(offerCards).map(card => ({
+            element: card,
+            year: card.dataset.year,
+            price: parseFloat(card.dataset.price),
+            rating: parseFloat(card.dataset.rating)
+        }));
 
-                filteredOffers = filteredOffers.filter(offer => {
-                    const matchYear = isYearInRange(offer.year, year);
-                    const matchPrice = price === 'all' ||
-                        (price === 'under_20' && offer.price < 20) ||
-                        (price === '20_50' && offer.price >= 20 && offer.price <= 50) ||
-                        (price === 'above_50' && offer.price > 50);
-                    return matchYear && matchPrice;
-                });
+        filteredOffers = filteredOffers.filter(offer => {
+            const matchYear = isYearInRange(offer.year, year);
+            const matchPrice = price === 'all' ||
+                (price === 'under_20' && offer.price < 20) ||
+                (price === '20_50' && offer.price >= 20 && offer.price <= 50) ||
+                (price === 'above_50' && offer.price > 50);
+            return matchYear && matchPrice;
+        });
 
-                if (sortOption === 'offers-popular') {
-                    filteredOffers.sort((a, b) => b.rating - a.rating);
-                } else if (sortOption === 'offers-newest') {
-                    filteredOffers.sort((a, b) => parseInt(b.year) - parseInt(a.year));
-                }
+        if (sortOption === 'offers-popular') {
+            filteredOffers.sort((a, b) => b.rating - a.rating);
+        } else if (sortOption === 'offers-newest') {
+            filteredOffers.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+        }
 
-                offerCards.forEach(card => card.style.display = 'none');
-                filteredOffers.slice(0, 14).forEach((offer, index) => {
-                    offer.element.style.display = 'block';
-                });
+        offerCards.forEach(card => card.style.display = 'none');
+        filteredOffers.slice(0, 14).forEach((offer, index) => {
+            offer.element.style.display = 'block';
+        });
 
-                let visibleOffers = 14;
-                if (filteredOffers.length > 14) {
-                    offersLoadMoreBtn.style.display = 'block';
-                    offersLoadMoreBtn.onclick = function() {
-                        const nextOffers = filteredOffers.slice(visibleOffers, visibleOffers + 7);
-                        nextOffers.forEach(offer => offer.element.style.display = 'block');
-                        visibleOffers += 7;
-                        if (visibleOffers >= filteredOffers.length) {
-                            offersLoadMoreBtn.style.display = 'none';
-                        }
-                    };
-                } else {
+        let visibleOffers = 14;
+        if (filteredOffers.length > 14) {
+            offersLoadMoreBtn.style.display = 'block';
+            offersLoadMoreBtn.onclick = function() {
+                const nextOffers = filteredOffers.slice(visibleOffers, visibleOffers + 7);
+                nextOffers.forEach(offer => offer.element.style.display = 'block');
+                visibleOffers += 7;
+                if (visibleOffers >= filteredOffers.length) {
                     offersLoadMoreBtn.style.display = 'none';
                 }
+            };
+        } else {
+            offersLoadMoreBtn.style.display = 'none';
+        }
 
-                offerCards.forEach(card => {
-                    card.addEventListener('click', function(e) {
-                        if (e.target.closest('.add-to-cart') || e.target.closest('.rating')) return;
-                        const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
-                        if (!isLoggedIn) {
-                            showNotification("Please log in to experience all features!", false);
-                        } else {
-                            const product = offersProducts.find(p => p.name === card.querySelector('.card-title').textContent);
-                            const queryString = new URLSearchParams(product).toString();
-                            window.location.href = `proinfor.php?${queryString}`;
-                        }
-                    });
-                });
+        offerCards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('.add-to-cart') || e.target.closest('.rating')) return;
+                const isLoggedIn = <?= $is_logged_in ? 'true' : 'false' ?>;
+                if (!isLoggedIn) {
+                    showNotification("Please log in to experience all features!", false);
+                } else {
+                    const product = offersProducts.find(p => p.name === card.querySelector('.card-title').textContent);
+                    const queryString = new URLSearchParams(product).toString();
+                    window.location.href = `proinfor.php?${queryString}`;
+                }
+            });
+        });
+    }
+
+    yearSelect.addEventListener('change', updateMainProducts);
+    priceSelect.addEventListener('change', updateMainProducts);
+    radioButtons.forEach(radio => radio.addEventListener('change', updateMainProducts));
+
+    offersYearSelect.addEventListener('change', updateOffers);
+    offersPriceSelect.addEventListener('change', updateOffers);
+    offersRadioButtons.forEach(radio => radio.addEventListener('change', updateOffers));
+
+    updateMainProducts();
+    updateOffers();
+
+    // Handle banner
+    const bannerImages = document.querySelectorAll('.banner-img');
+    let currentIndex = 0;
+
+    function showNextImage() {
+        bannerImages[currentIndex].classList.remove('active');
+        currentIndex = (currentIndex + 1) % bannerImages.length;
+        bannerImages[currentIndex].classList.add('active');
+    }
+
+    if (bannerImages.length > 0) {
+        bannerImages[currentIndex].classList.add('active');
+        setInterval(showNextImage, 3000);
+    }
+
+    // Handle navbar
+    const notificationBar = document.querySelector('.notification-bar');
+    const pageContent = document.querySelector('.page-content');
+    const body = document.body;
+    const navbar = document.querySelector('.navbar');
+    let lastScrollTop = 0;
+
+    if (notificationBar && pageContent && navbar) {
+        body.classList.add('notification-active');
+        const notificationHeight = notificationBar.offsetHeight;
+
+        navbar.style.marginTop = `${notificationHeight}px`;
+        pageContent.style.marginTop = `${notificationHeight}px`;
+
+        setTimeout(() => {
+            notificationBar.classList.add('hide');
+        }, 2000);
+
+        notificationBar.addEventListener('animationend', (event) => {
+            if (event.animationName === 'slideUp') {
+                body.classList.remove('notification-active');
+                navbar.style.marginTop = '0';
+                navbar.style.top = '0';
+                navbar.style.transform = 'translateY(0)';
+                pageContent.style.marginTop = '0';
+                pageContent.style.paddingTop = '0';
             }
+        });
+    }
 
-            yearSelect.addEventListener('change', updateMainProducts);
-            priceSelect.addEventListener('change', updateMainProducts);
-            radioButtons.forEach(radio => radio.addEventListener('change', updateMainProducts));
+    function updateNavbar() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
-            offersYearSelect.addEventListener('change', updateOffers);
-            offersPriceSelect.addEventListener('change', updateOffers);
-            offersRadioButtons.forEach(radio => radio.addEventListener('change', updateOffers));
+        if (scrollTop > 120) {
+            navbar.classList.add('fixed');
+            if (body.classList.contains('notification-active')) {
+                navbar.style.marginTop = `${notificationBar.offsetHeight}px`;
+            } else {
+                navbar.style.marginTop = '0';
+            }
+        } else {
+            navbar.classList.remove('fixed');
+            navbar.style.transform = 'translateY(0)';
+            navbar.style.marginTop = body.classList.contains('notification-active') ? `${notificationBar.offsetHeight}px` : '0';
+        }
+
+        lastScrollTop = scrollTop;
+    }
+
+    updateNavbar();
+    window.addEventListener('scroll', updateNavbar);
+
+    // Handle adding to cart
+    function attachAddToCartEvents() {
+        const addToCartButtons = document.querySelectorAll('.add-to-cart');
+        addToCartButtons.forEach(button => {
+            button.removeEventListener('click', handleAddToCart);
+            button.addEventListener('click', handleAddToCart);
+        });
+    }
+
+    function handleAddToCart(e) {
+        const productName = e.currentTarget.dataset.productName;
+        fetch(`?add_to_cart=${encodeURIComponent(productName)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`Added ${data.product_name} to cart!`, true);
+                    const cartCount = document.querySelector('.cart-count');
+                    if (cartCount) {
+                        cartCount.textContent = data.cart_count;
+                    } else {
+                        const cartIcon = document.querySelector('.cart-icon');
+                        cartIcon.insertAdjacentHTML('beforeend', `<span class="cart-count">${data.cart_count}</span>`);
+                    }
+                } else {
+                    showNotification(data.error || 'Failed to add to cart.', false);
+                }
+            })
+            .catch(error => {
+                console.error('Add to cart error:', error);
+                showNotification('An error occurred while adding to cart.', false);
+            });
+    }
+
+    attachAddToCartEvents();
+
+    // Handle search
+    const bannerSection = document.querySelector('.banner');
+    const offersSection = document.querySelector('.offers');
+    const liveSection = document.querySelector('.live');
+    const liveLink = document.querySelector('.live-link');
+    const homeLink = document.querySelector('.home-link');
+    const offersLink = document.querySelector('.offers-link');
+
+    function updateSearchResults(results) {
+        moviesGrid.innerHTML = '';
+        const uniqueResults = [];
+        const seenNames = new Set();
+        results.forEach(product => {
+            if (!seenNames.has(product.name)) {
+                seenNames.add(product.name);
+                uniqueResults.push(product);
+            }
+        });
+
+        if (uniqueResults.length > 0) {
+            uniqueResults.forEach(product => {
+                const card = createProductCard(product);
+                moviesGrid.appendChild(card);
+            });
+            attachAddToCartEvents();
+            loadMoreBtn.style.display = 'none'; // Ẩn nút "Load More" khi tìm kiếm
+        } else {
+            moviesGrid.innerHTML = '<div class="no-results">No Results Found</div>';
+            loadMoreBtn.style.display = 'none';
+        }
+    }
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+
+        if (query === '') {
+            bannerSection.style.display = 'block';
+            offersSection.style.display = 'block';
+            if (liveSection) liveSection.style.display = 'block';
+            if (liveLink) liveLink.style.display = 'block';
+            loadMoreBtn.style.display = mainProducts.length > itemsPerPage ? 'block' : 'none';
+            homeLink.style.display = 'block';
+            offersLink.style.display = 'block';
 
             updateMainProducts();
             updateOffers();
-
-            // Handle banner
-            const bannerImages = document.querySelectorAll('.banner-img');
-            let currentIndex = 0;
-
-            function showNextImage() {
-                bannerImages[currentIndex].classList.remove('active');
-                currentIndex = (currentIndex + 1) % bannerImages.length;
-                bannerImages[currentIndex].classList.add('active');
-            }
-
-            if (bannerImages.length > 0) {
-                bannerImages[currentIndex].classList.add('active');
-                setInterval(showNextImage, 3000);
-            }
-
-            // Handle navbar
-            const notificationBar = document.querySelector('.notification-bar');
-            const pageContent = document.querySelector('.page-content');
-            const body = document.body;
-            const navbar = document.querySelector('.navbar');
-            let lastScrollTop = 0;
-
-            if (notificationBar && pageContent && navbar) {
-                body.classList.add('notification-active');
-                const notificationHeight = notificationBar.offsetHeight;
-
-                navbar.style.marginTop = `${notificationHeight}px`;
-                pageContent.style.marginTop = `${notificationHeight}px`;
-
-                setTimeout(() => {
-                    notificationBar.classList.add('hide');
-                }, 2000);
-
-                notificationBar.addEventListener('animationend', (event) => {
-                    if (event.animationName === 'slideUp') {
-                        body.classList.remove('notification-active');
-                        navbar.style.marginTop = '0';
-                        navbar.style.top = '0';
-                        navbar.style.transform = 'translateY(0)';
-                        pageContent.style.marginTop = '0';
-                        pageContent.style.paddingTop = '0';
-                    }
-                });
-            }
-
-            function updateNavbar() {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-
-                if (scrollTop > 120) {
-                    navbar.classList.add('fixed');
-                    if (body.classList.contains('notification-active')) {
-                        navbar.style.marginTop = `${notificationBar.offsetHeight}px`;
-                    } else {
-                        navbar.style.marginTop = '0';
-                    }
-                } else {
-                    navbar.classList.remove('fixed');
-                    navbar.style.transform = 'translateY(0)';
-                    navbar.style.marginTop = body.classList.contains('notification-active') ? `${notificationBar.offsetHeight}px` : '0';
-                }
-
-                lastScrollTop = scrollTop;
-            }
-
-            updateNavbar();
-            window.addEventListener('scroll', updateNavbar);
-
-            // Handle adding to cart
-            function attachAddToCartEvents() {
-                const addToCartButtons = document.querySelectorAll('.add-to-cart');
-                addToCartButtons.forEach(button => {
-                    button.removeEventListener('click', handleAddToCart);
-                    button.addEventListener('click', handleAddToCart);
-                });
-            }
-
-            function handleAddToCart(e) {
-                e.preventDefault();
-                const productName = this.getAttribute('data-product-name');
-                fetch(`?add_to_cart=${encodeURIComponent(productName)}`, {
-                        method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            showNotification(`Game ${data.product_name} has been added to Cart`);
-                            const cartCount = document.querySelector('.cart-count');
-                            if (cartCount) {
-                                cartCount.textContent = data.cart_count;
-                            } else if (data.cart_count > 0) {
-                                const cartIcon = document.querySelector('.cart-icon');
-                                if (cartIcon) cartIcon.insertAdjacentHTML('beforeend', `<span class="cart-count">${data.cart_count}</span>`);
-                            }
-                        } else {
-                            showNotification(data.error || `Game ${data.product_name} is already in the cart!`, false);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        showNotification(`An error occurred: ${error.message}`, false);
-                    });
-            }
-
-            attachAddToCartEvents();
-
-            // Handle search
-const searchInput = document.querySelector('.navbar-form-search');
-const suggestionsContainer = document.querySelector('.search-suggestions');
-const searchForm = document.querySelector('.navbar-form');
-const bannerSection = document.querySelector('.banner');
-const offersSection = document.querySelector('.offers');
-const liveSection = document.querySelector('.live');
-const liveLink = document.querySelector('.live-link');
-const homeLink = document.querySelector('.home-link');
-const offersLink = document.querySelector('.offers-link');
-let debounceTimer;
-
-function updateSearchResults(results) {
-    moviesGrid.innerHTML = '';
-    if (results.length > 0) {
-        results.forEach(product => {
-            const card = createProductCard(product);
-            moviesGrid.appendChild(card);
-        });
-        attachAddToCartEvents();
-    } else {
-        moviesGrid.innerHTML = '<div class="no-results">No Results Found</div>';
-    }
-}
-
-searchInput.addEventListener('input', function() {
-    clearTimeout(debounceTimer);
-    const query = this.value.trim();
-
-    if (query === '') {
-        // Restore initial state
-        bannerSection.style.display = 'block';
-        offersSection.style.display = 'block';
-        if (liveSection) liveSection.style.display = 'block';
-        if (liveLink) liveLink.style.display = 'block';
-        loadMoreBtn.style.display = mainProducts.length > itemsPerPage ? 'block' : 'none';
-        homeLink.style.display = 'block';
-        offersLink.style.display = 'block';
-
-        updateMainProducts();
-        updateOffers();
-        suggestionsContainer.style.display = 'none';
-        return;
-    }
-
-    bannerSection.style.display = 'none';
-    offersSection.style.display = 'none';
-    if (liveSection) liveSection.style.display = 'none';
-    if (liveLink) liveLink.style.display = 'none';
-    loadMoreBtn.style.display = 'none';
-    homeLink.style.display = 'none';
-    offersLink.style.display = 'none';
-
-    debounceTimer = setTimeout(() => {
-        fetch(`?search=${encodeURIComponent(query)}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            updateSearchResults(data);
-
-            suggestionsContainer.innerHTML = '';
-            if (data.length > 0) {
-                data.slice(0, 5).forEach(product => {
-                    const suggestion = document.createElement('div');
-                    suggestion.className = 'suggestion-item';
-                    suggestion.innerHTML = `
-                        <img src="${product.image}" alt="${product.name}">
-                        <span>${product.name}</span>
-                    `;
-                    suggestion.addEventListener('click', () => {
-                        searchInput.value = product.name;
-                        suggestionsContainer.style.display = 'none';
-                        window.location.href = `?search=${encodeURIComponent(product.name)}`;
-                    });
-                    suggestionsContainer.appendChild(suggestion);
-                });
-                suggestionsContainer.style.display = 'block';
-            } else {
-                suggestionsContainer.style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error('Search error:', error);
             suggestionsContainer.style.display = 'none';
-        });
-    }, 300);
-});
+            return;
+        }
 
-searchForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const query = searchInput.value.trim();
-    if (query) {
-        window.location.href = `?search=${encodeURIComponent(query)}`;
-    }
-});
+        bannerSection.style.display = 'none';
+        offersSection.style.display = 'none';
+        if (liveSection) liveSection.style.display = 'none';
+        if (liveLink) liveLink.style.display = 'none';
+        homeLink.style.display = 'none';
+        offersLink.style.display = 'none';
 
-// Handle notification
-function showNotification(message, isSuccess = true) {
-    const notification = document.createElement('div');
-    notification.className = 'cart-notification';
-    notification.innerHTML = `
-        <div class="checkmark ${isSuccess ? '' : 'warning'}">
-            <ion-icon name="${isSuccess ? 'checkmark' : 'warning'}"></ion-icon>
-        </div>
-        <span class="message">${message}</span>
-    `;
-    document.body.appendChild(notification);
+        debounceTimer = setTimeout(() => {
+            fetch(`?search=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateSearchResults(data);
 
-    setTimeout(() => notification.classList.add('show'), 10);
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
+                    suggestionsContainer.innerHTML = '';
+                    if (data.length > 0) {
+                        const uniqueSuggestions = [];
+                        const seenSuggestionNames = new Set();
+                        data.forEach(product => {
+                            if (!seenSuggestionNames.has(product.name)) {
+                                seenSuggestionNames.add(product.name);
+                                uniqueSuggestions.push(product);
+                            }
+                        });
 
-// Handle logout confirmation
-const logoutLink = document.querySelector('.logout-link');
-if (logoutLink) {
-    logoutLink.addEventListener('click', function(e) {
-        e.preventDefault();
+                        uniqueSuggestions.forEach(product => {
+                            const suggestion = document.createElement('div');
+                            suggestion.className = 'suggestion-item';
+                            suggestion.innerHTML = `
+                                <img src="${product.image}" alt="${product.name}">
+                                <span>${product.name}</span>
+                            `;
+                            suggestion.addEventListener('click', () => {
+                                searchInput.value = product.name;
+                                suggestionsContainer.style.display = 'none';
+                                fetch(`?search=${encodeURIComponent(product.name)}`, {
+                                        headers: {
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        }
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        updateSearchResults(data);
+                                    });
+                            });
+                            suggestionsContainer.appendChild(suggestion);
+                        });
+                        suggestionsContainer.style.display = 'block';
+                    } else {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    suggestionsContainer.innerHTML = '';
+                    suggestionsContainer.style.display = 'none';
+                });
+        }, 300);
+    });
+
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault(); // Ngăn tải lại trang
+        const query = searchInput.value.trim();
+        if (query) {
+            fetch(`?search=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    updateSearchResults(data);
+                    suggestionsContainer.style.display = 'none'; // Ẩn dropdown khi nhấn Enter
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                });
+        }
+    });
+
+    // Handle click outside to hide suggestions
+    document.addEventListener('click', function(e) {
+        const isClickInsideSearch = searchInput.contains(e.target);
+        const isClickInsideSuggestions = suggestionsContainer.contains(e.target);
+
+        if (!isClickInsideSearch && !isClickInsideSuggestions) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+
+    // Handle notification
+    function showNotification(message, isSuccess = true) {
         const notification = document.createElement('div');
         notification.className = 'cart-notification';
         notification.innerHTML = `
-            <div class="checkmark warning">
-                <ion-icon name="warning"></ion-icon>
+            <div class="checkmark ${isSuccess ? '' : 'warning'}">
+                <ion-icon name="${isSuccess ? 'checkmark' : 'warning'}"></ion-icon>
             </div>
-            <span class="message">Are you sure you want to log out?</span>
-            <div class="notification-buttons">
-                <button class="cart-btn">Yes</button>
-                <button class="cart-btn cancel-logout">No</button>
-            </div>
+            <span class="message">${message}</span>
         `;
         document.body.appendChild(notification);
 
         setTimeout(() => notification.classList.add('show'), 10);
-
-        notification.querySelector('.cart-btn').addEventListener('click', () => {
-            window.location.href = '?logout=true';
-        });
-
-        notification.querySelector('.cancel-logout').addEventListener('click', () => {
+        setTimeout(() => {
             notification.classList.remove('show');
             setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // Handle logout confirmation
+    const logoutLink = document.querySelector('.logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const notification = document.createElement('div');
+            notification.className = 'cart-notification';
+            notification.innerHTML = `
+                <div class="checkmark warning">
+                    <ion-icon name="warning"></ion-icon>
+                </div>
+                <span class="message">Are you sure you want to log out?</span>
+                <div class="notification-buttons">
+                    <button class="cart-btn">Yes</button>
+                    <button class="cart-btn cancel-logout">No</button>
+                </div>
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.classList.add('show'), 10);
+
+            notification.querySelector('.cart-btn').addEventListener('click', () => {
+                window.location.href = '?logout=true';
+            });
+
+            notification.querySelector('.cancel-logout').addEventListener('click', () => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            });
+        });
+    }
+
+    // Handle banner dots
+    const dots = document.querySelectorAll('.dot');
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            bannerImages[currentIndex].classList.remove('active');
+            dots[currentIndex].classList.remove('active');
+            currentIndex = index;
+            bannerImages[currentIndex].classList.add('active');
+            dots[currentIndex].classList.add('active');
         });
     });
-}
 
-// Handle banner dots
-const dots = document.querySelectorAll('.dot');
-dots.forEach((dot, index) => {
-    dot.addEventListener('click', () => {
-        bannerImages[currentIndex].classList.remove('active');
-        dots[currentIndex].classList.remove('active');
-        currentIndex = index;
-        bannerImages[currentIndex].classList.add('active');
-        dots[currentIndex].classList.add('active');
-    });
+    dots[currentIndex].classList.add('active');
+
+    // Handle live section scrolling
+    const liveGrid = document.querySelector('.live-grid');
+    const scrollLeftBtn = document.querySelector('.scroll-btn.left');
+    const scrollRightBtn = document.querySelector('.scroll-btn.right');
+
+    if (liveGrid && scrollLeftBtn && scrollRightBtn) {
+        scrollLeftBtn.addEventListener('click', () => {
+            liveGrid.scrollBy({
+                left: -300,
+                behavior: 'smooth'
+            });
+        });
+
+        scrollRightBtn.addEventListener('click', () => {
+            liveGrid.scrollBy({
+                left: 300,
+                behavior: 'smooth'
+            });
+        });
+    }
 });
 
-dots[currentIndex].classList.add('active');
+// Handle smooth scrolling for Offers and Live links
+const offersLink = document.querySelector('.offers-link');
+const liveLink = document.querySelector('.live-link');
 
-// Handle live section scrolling
-const liveGrid = document.querySelector('.live-grid');
-const scrollLeftBtn = document.querySelector('.scroll-btn.left');
-const scrollRightBtn = document.querySelector('.scroll-btn.right');
-
-if (liveGrid && scrollLeftBtn && scrollRightBtn) {
-    scrollLeftBtn.addEventListener('click', () => {
-        liveGrid.scrollBy({ left: -300, behavior: 'smooth' });
-    });
-
-    scrollRightBtn.addEventListener('click', () => {
-        liveGrid.scrollBy({ left: 300, behavior: 'smooth' });
+if (offersLink) {
+    offersLink.addEventListener('click', function(e) {
+        e.preventDefault(); // Ngăn hành vi mặc định của liên kết
+        const offersSection = document.querySelector('#offers');
+        if (offersSection) {
+            const offset = 110; // Khoảng cách từ đầu section (px)
+            const sectionTop = offersSection.getBoundingClientRect().top + window.pageYOffset - offset;
+            window.scrollTo({
+                top: sectionTop,
+                behavior: 'smooth'
+            });
+        }
     });
 }
-});
-    </script>
+
+if (liveLink) {
+    liveLink.addEventListener('click', function(e) {
+        e.preventDefault(); // Ngăn hành vi mặc định của liên kết
+        const liveSection = document.querySelector('#live');
+        if (liveSection) {
+            const offset = 100; // Khoảng cách từ đầu section (px)
+            const sectionTop = liveSection.getBoundingClientRect().top + window.pageYOffset - offset;
+            window.scrollTo({
+                top: sectionTop,
+                behavior: 'smooth'
+            });
+        }
+    });
+}
+</script>
 </body>
+
 </html>
