@@ -2,10 +2,10 @@
 session_start();
 
 // Connect to database
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "sdlcsql";
+$servername = "103.75.184.31";
+$username = "tovjaghhhosting_NguyenVanTuyen";
+$password = "123abcD!";
+$database = "tovjaghhhosting_sdlcsql";
 
 $connect = new mysqli($servername, $username, $password, $database);
 if ($connect->connect_error) {
@@ -317,7 +317,7 @@ $connect->close();
             <?php if ($edit_mode && $product_data['product_img']): ?>
                 <p>Current image: <?php echo htmlspecialchars($product_data['product_img']); ?></p>
             <?php endif; ?>
-            <input type="number" name="year" placeholder="Release Year" min="1980" max="2024" value="<?php echo $edit_mode ? htmlspecialchars($product_data['year'] ?? '') : ''; ?>">
+            <input type="number" name="year" placeholder="Release Year" min="1980" max="2025" value="<?php echo $edit_mode ? htmlspecialchars($product_data['year'] ?? '') : ''; ?>">
             <input type="number" name="discount" placeholder="Discount Percentage" min="0" max="100" value="<?php echo $edit_mode ? htmlspecialchars($product_data['discount']) : ''; ?>">
             <button type="submit"><?php echo $edit_mode ? "Edit product" : "Add product"; ?></button>
         </form>
