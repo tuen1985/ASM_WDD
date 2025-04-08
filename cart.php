@@ -4,7 +4,7 @@ session_start();
 // Database connection
 function getDBConnection(): mysqli
 {
-    $conn = new mysqli('localhost', 'root', '', 'sdlcsql');
+    $conn = new mysqli('103.75.184.31', 'tovjaghhhosting_NguyenVanTuyen', '123abcD!', 'tovjaghhhosting_sdlcsql');
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
@@ -186,7 +186,7 @@ $total_price = calculateTotalPrice($cart_items);
                     </div>
                     <div class="item-buttons">
                         <button class="remove-btn" onclick="removeFromCart(<?= $index ?>)">Remove</button>
-                        <button class="checkout-item-btn" onclick="checkoutItem(<?= $index ?>)">Checkout</button>
+                        <button class="checkout-item-btn" onclick="checkoutItem(<?= $index ?>)">Buy</button>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -196,7 +196,7 @@ $total_price = calculateTotalPrice($cart_items);
     <div class="cart-summary">
         <h3>Total: <span id="total-price">$<?= $total_price ?></span></h3>
         <button class="clear-cart" onclick="clearCart()">Clear All</button>
-        <button class="checkout-btn" onclick="checkoutAll()">Checkout All</button>
+        <button class="checkout-btn" onclick="checkoutAll()">Buy All</button>
     </div>
 
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
