@@ -1,5 +1,4 @@
 <?php
-
 // Start session and include database connection
 session_start();
 require_once './connect.php';
@@ -11,9 +10,10 @@ $error = '';
  * Process registration form submission
  * @return void
  */
-function processRegistration($connect) {
+function processRegistration($connect)
+{
     global $error;
-    
+
     if ($_SERVER["REQUEST_METHOD"] !== "POST") {
         return;
     }
@@ -45,7 +45,7 @@ function processRegistration($connect) {
     // Hash password and insert new user
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
     $default_role = 'customer';
-    
+
     $insert_stmt = $connect->prepare(
         "INSERT INTO user (Username, Email, password, role) VALUES (?, ?, ?, ?)"
     );
@@ -72,7 +72,122 @@ processRegistration($connect);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
     <link rel="icon" type="image/png" href="/image-Photoroom.png">
-    <link rel="stylesheet" href="/register.css">
+    <style>
+        :root {
+            --primary-color: #1877f2;
+            --error-color: #dc3545;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(180deg, transparent 20%, #000a);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h2 {
+            color: #1877f2;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            background: #f8d7da;
+            padding: 0.8rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        label {
+            font-size: 1rem;
+            color: #333;
+        }
+
+        input {
+            padding: 0.8rem;
+            border: 1px solid #dddfe2;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            width: 100%;
+            background-color: #f5f6f7;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px #e7f3ff;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background: #166fe5;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .login-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .privacy-notice {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .privacy-notice a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .privacy-notice a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -81,31 +196,31 @@ processRegistration($connect);
             <div class="error-message"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         <form method="POST" class="form-group">
-            <input 
-                type="text" 
-                name="username" 
-                placeholder="Username" 
-                required 
-                autocomplete="username"
-            >
-            <input 
-                type="email" 
-                name="email" 
-                placeholder="Email" 
-                required 
-                autocomplete="email"
-            >
-            <input 
-                type="password" 
-                name="password" 
-                placeholder="Password" 
-                required 
-                autocomplete="new-password"
-            >
-            <button type="submit">Register</button>
+            <label for="username">Username</label>
+            <input
+                type="text"
+                name="username"
+                required
+                autocomplete="username">
+            <label for="email">Email Address</label>
+            <input
+                type="email"
+                name="email"
+                required
+                autocomplete="email">
+            <label for="password">Password</label>
+            <input
+                type="password"
+                name="password"
+                required
+                autocomplete="new-password">
+            <button type="submit">Sign Up</button>
         </form>
         <div class="login-link">
-            Already have an account? <a href="./login.php">Login</a>
+            Already have an account? <a href="./login.php">Sign In</a>
+        </div>
+        <div class="privacy-notice">
+            Personal information which you give us may be used by us to process your order process. For further details please see our <a href="https://youtu.be/Jqr1KIS5iTc?si=oL_xzXHmUW4pnO4l">Privacy Policy</a>.
         </div>
     </div>
 </body>
