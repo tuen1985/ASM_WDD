@@ -29,6 +29,11 @@ $product = $_GET;
             min-height: 100vh;
             margin: 0;
         }
+        .container-wrapper {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
         .container {
             background-color: white;
             padding: 2rem;
@@ -36,6 +41,10 @@ $product = $_GET;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 600px;
+        }
+        .container:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
         }
         h1 {
             color: #1877f2;
@@ -90,30 +99,32 @@ $product = $_GET;
     </style>
 </head>
 <body>
-<div class="container">
-    <h1><?php echo htmlspecialchars($product['name']); ?></h1>
-    <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-img">
-    <p><strong>Price:</strong> 
-        <?php 
-        if (isset($product['discount']) && $product['discount'] > 0) {
-            $original_price = floatval($product['price']);
-            $discounted_price = $original_price * (1 - $product['discount'] / 100);
-            echo '<span class="original-price">$' . number_format($original_price, 2) . '</span> ';
-            echo '<span class="price">$' . number_format($discounted_price, 2) . '</span>';
-        } else {
-            echo '<span class="price">$' . number_format($product['price'], 2) . '</span>';
-        }
-        ?>
-    </p>
-    <?php if (isset($product['discount']) && $product['discount'] > 0): ?>
-        <p><strong>Discount:</strong> <?php echo htmlspecialchars($product['discount']); ?>%</p>
-    <?php endif; ?>
-    <p class="rating"><strong>Rating:</strong> <?php echo isset($product['rating']) ? htmlspecialchars($product['rating']) : 'Not yet rated'; ?>
-        <?php if (isset($product['rating'])): ?>
-            <ion-icon name="star"></ion-icon>
+<a href="welcome.php" class="container-wrapper">
+    <div class="container">
+        <h1><?php echo htmlspecialchars($product['name']); ?></h1>
+        <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-img">
+        <p><strong>Price:</strong> 
+            <?php 
+            if (isset($product['discount']) && $product['discount'] > 0) {
+                $original_price = floatval($product['price']);
+                $discounted_price = $original_price * (1 - $product['discount'] / 100);
+                echo '<span class="original-price">$' . number_format($original_price, 2) . '</span> ';
+                echo '<span class="price">$' . number_format($discounted_price, 2) . '</span>';
+            } else {
+                echo '<span class="price">$' . number_format($product['price'], 2) . '</span>';
+            }
+            ?>
+        </p>
+        <?php if (isset($product['discount']) && $product['discount'] > 0): ?>
+            <p><strong>Discount:</strong> <?php echo htmlspecialchars($product['discount']); ?>%</p>
         <?php endif; ?>
-    </p>
-    <p><strong>Release Year:</strong> <?php echo isset($product['year']) ? htmlspecialchars($product['year']) : 'Not specified'; ?></p>
-</div>
+        <p class="rating"><strong>Rating:</strong> <?php echo isset($product['rating']) ? htmlspecialchars($product['rating']) : 'Not yet rated'; ?>
+            <?php if (isset($product['rating'])): ?>
+                <ion-icon name="star"></ion-icon>
+            <?php endif; ?>
+        </p>
+        <p><strong>Release Year:</strong> <?php echo isset($product['year']) ? htmlspecialchars($product['year']) : 'Not specified'; ?></p>
+    </div>
+</a>
 </body>
 </html>
