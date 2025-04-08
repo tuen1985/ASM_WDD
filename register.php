@@ -1,4 +1,5 @@
 <?php
+
 // Start session and include database connection
 session_start();
 require_once './connect.php';
@@ -67,6 +68,7 @@ processRegistration($connect);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -99,10 +101,9 @@ processRegistration($connect);
         }
 
         h2 {
-            color: #1877f2;
+            color: var(--primary-color);
             text-align: center;
             margin-bottom: 1.5rem;
-            font-size: 2rem;
         }
 
         .error-message {
@@ -120,11 +121,6 @@ processRegistration($connect);
             gap: 1rem;
         }
 
-        label {
-            font-size: 1rem;
-            color: #333;
-        }
-
         input {
             padding: 0.8rem;
             border: 1px solid #dddfe2;
@@ -132,7 +128,6 @@ processRegistration($connect);
             font-size: 1rem;
             box-sizing: border-box;
             width: 100%;
-            background-color: #f5f6f7;
         }
 
         input:focus {
@@ -171,24 +166,9 @@ processRegistration($connect);
         .login-link a:hover {
             text-decoration: underline;
         }
-
-        .privacy-notice {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.8rem;
-            color: #666;
-        }
-
-        .privacy-notice a {
-            color: var(--primary-color);
-            text-decoration: none;
-        }
-
-        .privacy-notice a:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h2>Register</h2>
@@ -196,32 +176,30 @@ processRegistration($connect);
             <div class="error-message"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         <form method="POST" class="form-group">
-            <label for="username">Username</label>
             <input
                 type="text"
                 name="username"
+                placeholder="Username"
                 required
                 autocomplete="username">
-            <label for="email">Email Address</label>
             <input
                 type="email"
                 name="email"
+                placeholder="Email"
                 required
                 autocomplete="email">
-            <label for="password">Password</label>
             <input
                 type="password"
                 name="password"
+                placeholder="Password"
                 required
                 autocomplete="new-password">
-            <button type="submit">Sign Up</button>
+            <button type="submit">Register</button>
         </form>
         <div class="login-link">
-            Already have an account? <a href="./login.php">Sign In</a>
-        </div>
-        <div class="privacy-notice">
-            Personal information which you give us may be used by us to process your order process. For further details please see our <a href="https://youtu.be/Jqr1KIS5iTc?si=oL_xzXHmUW4pnO4l">Privacy Policy</a>.
+            Already have an account? <a href="./login.php">Login</a>
         </div>
     </div>
 </body>
+
 </html>
