@@ -1,8 +1,8 @@
 <?php
-$connect = mysqli_connect('localhost', 'root', '', 'sdlcsql');
+$connect = mysqli_connect('103.75.184.31', 'tovjaghhhosting_NguyenVanTuyen', '123abcD!', 'tovjaghhhosting_sdlcsql');
 
 if (!$connect) {
-    echo "Kết nối thất bại";
+    echo "Connection failed";
 } else {
     echo "";
 }
