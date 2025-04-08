@@ -9,10 +9,10 @@ if (!isset($_SESSION['user_id'])) {
 
 // Database configuration
 const DB_CONFIG = [
-    'host' => 'localhost',
-    'username' => 'root',
-    'password' => '',
-    'database' => 'sdlcsql'
+    'host' => '103.75.184.31',
+    'username' => 'tovjaghhhosting_NguyenVanTuyen',
+    'password' => '123abcD!',
+    'database' => 'tovjaghhhosting_sdlcsql'
 ];
 
 /**
