@@ -16,10 +16,10 @@ if (isset($_GET['logout']) && $_GET['logout'] === 'true') {
 }
 
 // Connect to database
-$servername = "localhost";
-$username = "root";
-$password = "";
-$database = "sdlcsql";
+$servername = "103.75.184.31";
+$username = "tovjaghhhosting_NguyenVanTuyen";
+$password = "123abcD!";
+$database = "tovjaghhhosting_sdlcsql";
 
 $connect = new mysqli($servername, $username, $password, $database);
 if ($connect->connect_error) {
